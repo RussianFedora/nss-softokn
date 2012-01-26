@@ -1,0 +1,19 @@
+diff -urN nss-softokn-3.13.1.orig/mozilla/security/nss/cmd/manifest.mn nss-softokn-3.13.1/mozilla/security/nss/cmd/manifest.mn
+--- nss-softokn-3.13.1.orig/mozilla/security/nss/cmd/manifest.mn	2012-01-27 00:30:40.701290714 +0400
++++ nss-softokn-3.13.1/mozilla/security/nss/cmd/manifest.mn	2012-01-27 00:31:10.922292530 +0400
+@@ -54,7 +54,6 @@
+  dbtest \
+  derdump  \
+  digest  \
+- fipstest  \
+  makepqg  \
+  multinit \
+  ocspclnt  \
+@@ -84,6 +83,7 @@
+  $(NULL)
+ 
+ TEMPORARILY_DONT_BUILD = \
++ fipstest  \
+  $(NULL)
+ 
+ # rsaperf  \

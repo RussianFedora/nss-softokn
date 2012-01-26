@@ -64,6 +64,7 @@ Patch8:           softoken-minimal-test-dependencies.patch
 # NSSUTIL_INCLUDE_DIR, after all, contains both util and freebl headers. 
 # Once has been bootstapped the patch may be removed, but it doesn't hurt to keep it.
 Patch9:           iquote.patch
+Patch99:	  nofipstest.patch
 
 %description
 Network Security Services Softoken Cryptographic Module
@@ -119,6 +120,7 @@ Header and Library files for doing development with Network Security Services.
 %patch8 -p0 -b .crypto
 # activate if needed when doing a major update with new apis
 #%patch9 -p0 -b .iquote
+%patch99 -p1
 
 %build
 
