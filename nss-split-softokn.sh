@@ -64,45 +64,15 @@ cp ${nss_source_dir}/mozilla/security/nss/trademarks.txt ${SOFTOKN_WORK}/${softo
 cp ${nss_source_dir}/mozilla/security/nss/lib/Makefile ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/lib
 cp ${nss_source_dir}/mozilla/security/nss/lib/manifest.mn ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/lib
 
-# we do need shlibsign from cmd and other things
+# we do need shlibsign from cmd
 mkdir ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd
-# copy some files at the top and selected subdirectories
+# copy some files at the top and the slhlib subdirectory
 cp -p ${nss_source_dir}/mozilla/security/nss/cmd/Makefile ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd
 cp -p ${nss_source_dir}/mozilla/security/nss/cmd/manifest.mn ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd
 cp -p ${nss_source_dir}/mozilla/security/nss/cmd/platlibs.mk ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd
 cp -p ${nss_source_dir}/mozilla/security/nss/cmd/platrules.mk ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd
 
-# copy the bltest, fipstests, lib, and shlibsign subdirectories
-#for d in "bltest fipstest lib shlibsign"; do
-cp -a ${nss_source_dir}/mozilla/security/nss/cmd/bltest \
-      ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd/bltest
-cp -a ${nss_source_dir}/mozilla/security/nss/cmd/fipstest \
-      ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd/fipstest
-cp -a ${nss_source_dir}/mozilla/security/nss/cmd/lib \
-      ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd/lib
-cp -a ${nss_source_dir}/mozilla/security/nss/cmd/shlibsign \
-      ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd/shlibsign
-#done
-
-# we also need some test scripts and dtest data from tests
-mkdir ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/tests
-
-# copy the files at the top
-fs="all.sh clean_tbx core_watch dll_version.sh header jssdir \
-jss_dll_version.sh jssqa mksymlinks \
-nssdir nsspath nssqa path_uniq platformlist \
-platformlist.tbx qaclean qa_stage qa_stat \
-README.txt run_niscc.sh set_environment"
-for f in $fs; do
- cp -p ${nss_source_dir}/mozilla/security/nss/tests/$f \
-       ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/tests
-done
-
-# copy the subdirectories that we need
-cp -a ${nss_source_dir}/mozilla/security/nss/tests/common \
-      ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/tests
-cp -a ${nss_source_dir}/mozilla/security/nss/tests/cipher \
-      ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/tests
+cp -a ${nss_source_dir}/mozilla/security/nss/cmd/shlibsign ${SOFTOKN_WORK}/${softokn_dir}/mozilla/security/nss/cmd/shlibsign
 
 pushd ${SOFTOKN_WORK}
 # the compressed tar ball for nss-softokn

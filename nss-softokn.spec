@@ -1,6 +1,6 @@
-%global nspr_version 4.8.8
+%global nspr_version 4.8.9
 %global nss_name nss
-%global nss_util_version 3.12.10
+%global nss_util_version 3.13.1
 %global unsupported_tools_directory %{_libdir}/nss/unsupported-tools
 %global saved_files_dir %{_libdir}/nss/saved
 
@@ -16,8 +16,8 @@
 
 Summary:          Network Security Services Softoken Module
 Name:             nss-softokn
-Version:          3.12.10
-Release:          5.el6.R
+Version:          3.13.1
+Release:          15%{?dist}.R
 License:          MPLv1.1 or GPLv2+ or LGPLv2+
 URL:              http://www.mozilla.org/projects/security/pki/nss/
 Group:            System Environment/Libraries
@@ -49,9 +49,21 @@ Source1:          nss-split-softokn.sh
 Source2:          nss-softokn.pc.in
 Source3:          nss-softokn-config.in
 
+Patch1:           add-relro-linker-option.patch
+# Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=562116
 Patch2:           nss-softokn-3.12.4-prelink.patch
-Patch3:           bz709517.patch
-Patch4:           softoken-minimal-test-dependencies.patch
+# Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=457045
+Patch5:           drbg.patch
+# TODO: Open upstream bug and submmit a patch for this
+Patch8:           softoken-minimal-test-dependencies.patch
+# This patch uses the gcc-iquote dir option  documented at
+# http://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html#Directory-Options
+# to place the in-tree directories at the head of the list on list of directories
+# to be searched for for header files. This is ensures a build even when system freebl 
+# headers are older. Such is the case when we are starting a major update.
+# NSSUTIL_INCLUDE_DIR, after all, contains both util and freebl headers. 
+# Once has been bootstapped the patch may be removed, but it doesn't hurt to keep it.
+Patch9:           iquote.patch
 
 %description
 Network Security Services Softoken Cryptographic Module
@@ -101,10 +113,12 @@ Header and Library files for doing development with Network Security Services.
 %prep
 %setup -q
 
+%patch1 -p0 -b .relro
 %patch2 -p0 -b .prelink
-%patch3 -p0 -b .709517
-%patch4 -p0 -b .onlycrypto
-
+%patch5 -p0 -b .drbg
+%patch8 -p0 -b .crypto
+# activate if needed when doing a major update with new apis
+#%patch9 -p0 -b .iquote
 
 %build
 
@@ -138,11 +152,8 @@ NSPR_LIB_DIR=`/usr/bin/pkg-config --libs-only-L nspr | sed 's/-L//'`
 export NSPR_INCLUDE_DIR
 export NSPR_LIB_DIR
 
-NSSUTIL_INCLUDE_DIR=`/usr/bin/pkg-config --cflags-only-I nss-util | sed 's/-I//'`
-NSSUTIL_LIB_DIR=%{_libdir}
-
-export NSSUTIL_INCLUDE_DIR
-export NSSUTIL_LIB_DIR
+export NSSUTIL_INCLUDE_DIR=`/usr/bin/pkg-config --cflags-only-I nss-util | sed 's/-I//'`
+export NSSUTIL_LIB_DIR=%{_libdir}
 
 NSS_USE_SYSTEM_SQLITE=1
 export NSS_USE_SYSTEM_SQLITE
@@ -151,6 +162,9 @@ export NSS_USE_SYSTEM_SQLITE
 USE_64=1
 export USE_64
 %endif
+
+# uncomment if the iguote patch is activated
+#export IN_TREE_FREEBL_HEADERS_FIRST=1
 
 # Compile softokn plus needed support
 %{__make} -C ./mozilla/security/coreconf
@@ -174,8 +188,8 @@ SOFTOKEN_VMAJOR=`cat mozilla/security/nss/lib/softoken/softkver.h | grep "#defin
 SOFTOKEN_VMINOR=`cat mozilla/security/nss/lib/softoken/softkver.h | grep "#define.*SOFTOKEN_VMINOR" | awk '{print $3}'`
 SOFTOKEN_VPATCH=`cat mozilla/security/nss/lib/softoken/softkver.h | grep "#define.*SOFTOKEN_VPATCH" | awk '{print $3}'`
 
-export SOFTOKEN_VMAJOR 
-export SOFTOKEN_VMINOR 
+export SOFTOKEN_VMAJOR
+export SOFTOKEN_VMINOR
 export SOFTOKEN_VPATCH
 
 %{__cat} %{SOURCE3} | sed -e "s,@libdir@,%{_libdir},g" \
@@ -238,8 +252,6 @@ cd ./mozilla/security/nss/tests/
 HOST=localhost DOMSUF=localdomain PORT=$MYRAND NSS_CYCLES=%{?nss_cycles} NSS_TESTS=%{?nss_tests} NSS_SSL_TESTS=%{?nss_ssl_tests} NSS_SSL_RUN=%{?nss_ssl_run} ./all.sh
 
 cd ../../../../
-
-killall $RANDSERV || :
 
 TEST_FAILURES=`grep -c FAILED ./mozilla/tests_results/security/localhost.1/output.log` || :
 # test suite is failing on arm and has for awhile let's run the test suite but make it non fatal on arm
@@ -314,15 +326,14 @@ done
 %{__install} -p -m 644 ./mozilla/dist/pkgconfig/nss-softokn.pc $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/nss-softokn.pc
 %{__install} -p -m 755 ./mozilla/dist/pkgconfig/nss-softokn-config $RPM_BUILD_ROOT/%{_bindir}/nss-softokn-config
 
+
 %clean
 %{__rm} -rf $RPM_BUILD_ROOT
 
 
-%post
-/sbin/ldconfig >/dev/null 2>/dev/null
+%post -p /sbin/ldconfig
 
-%postun
-/sbin/ldconfig >/dev/null 2>/dev/null
+%postun -p /sbin/ldconfig
 
 %files
 %defattr(-,root,root)
@@ -375,7 +386,57 @@ done
 %{_includedir}/nss3/shsign.h
 
 %changelog
-* Wed Aug 17 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.10-5.el6.R
+* Thu Jan 26 2012 Arkady L. Shane <ashejn@russianfedora.ru> - 3.13.1-15.R
+- rebuilt for EL
+
+* Fri Dec 30 2011 Elio Maldonado <emaldona@redhat.com> - 3.13.1-15
+- Bug 770999 - Fix segmentation violation when turning on fips mode
+- Reintroduce the iquote patch but don't apply it unless needed
+
+* Tue Dec 13 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.9-14
+- Restore the update to 3.13.1
+- Update the patch for freebl to deal with prelinked shared libraries
+- Add additional dbrg power-up self-tests as required by fips
+- Reactivate the tests
+
+* Tue Dec 06 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.9-13
+- Bug 757005 Build nss-softokn for rhel 7
+- Make it almost like nss-softokn-3.12.9 in rhel 6.2
+- Added a patch to build with Linux 3 and higher
+- Meant to work with nss and nss-utul 3.1.3.1
+- Download only the 3.12.9 sources from the lookaside cache
+
+* Fri Dec 02 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.9-12
+- Retagging
+
+* Wed Nov 23 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.9-11
+- Downgrading to 3.12.9 for a merge into new RHEL git repo
+- This build is for the buildroot for a limited time only
+- Do not not push it to update-testing
+
+* Tue Nov 08 2011 Elio Maldonado <emaldona@redhat.com> - 3.13.1-1
+- Update to NSS_3_13_1_RTM
+
+* Wed Oct 12 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.10-6
+- Fix failure to switch nss-softokn to FIPS mode (#745571)
+
+* Tue Oct 11 2011 Elio Maldonado <emaldona@redhat.com> - 3.13-0.1.rc0.3
+- Update to NSS_3_13_RC0 post bootstrapping
+- Don't incude util in sources for the lookaside cache
+- Reenable building the fipstest tool
+- Restore full cli argument parsing in the sectool library
+
+* Sun Oct 09 2011 Elio Maldonado <emaldona@redhat.com> - 3.13-0.1.rc0.2
+- Update to NSS_3_13_RC0 bootstrapping the system phase 2
+- Reenable the cipher test suite
+
+* Sat Oct 08 2011 Elio Maldonado <emaldona@redhat.com> - 3.13-0.rc0.1
+- Update to NSS_3_13_RC0
+
+* Thu Sep  8 2011 Ville Skyttä <ville.skytta@iki.fi> - 3.12.11-3
+- Avoid %%post/un shell invocations and dependencies.
+
+* Wed Aug 17 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.10-5
 - rebuilt as recommended to deal with an rpm 4.9.1 issue
 
 * Wed Jul 20 2011 Elio Maldonado <emaldona@redhat.com> - 3.12.10-4
